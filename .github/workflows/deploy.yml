@@ -1,0 +1,79 @@
+name: Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build_image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install docker-stack
+        run: pip install --upgrade docker-stack
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker images
+        ## build step can use any of the yaml file it doesn't matter
+        run: docker-stack build --push docker-compose-mainnet.yml
+        working-directory: deploy
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+
+  deploy_services:
+    name: Production Deploy [${{ matrix.network }}]
+    needs: build_image
+    strategy:
+      matrix:
+        network:
+          - preview
+          - preprod
+          - mainnet
+      max-parallel: 1
+    runs-on: builder
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+  
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install docker-stack
+        run: pip install --upgrade docker-stack
+    
+
+      - name: Deploy stack
+        run: docker-stack deploy --with-registry-auth dbsync-api docker-compose-${{ matrix.network}}.yml
+        working-directory: deploy
+        env:
+          NETWORK_NAME: ${{ matrix.network }}
+          COMMIT_SHA: ${{ github.sha }}
+          IMAGE_TAG: ${{ github.sha }}
+          DOCKER_HOST: 172.31.0.5:2376
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          DATABASE_HOST: ${{ vars.DATABASE_HOST }}
+          ELASTIC_APM_API_KEY: ${{ secrets.ELASTIC_APM_API_KEY }}
+          ELASTIC_APM_SERVER_URL: ${{ vars.ELASTIC_APM_SERVER_URL }}

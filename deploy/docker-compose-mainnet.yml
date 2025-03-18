@@ -1,0 +1,39 @@
+services:
+  ${NETWORK_NAME}:  
+    image: ghcr.io/cardanoapi/dbsync-api:${IMAGE_TAG}
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgres://postgres:${DATABASE_PASSWORD}@${DATABASE_HOST}:5432/dbsync_${NETWORK_NAME}?connection_limit=100
+      - CORS_ENABLE=true
+      - PORT=8080
+      - VIRTUAL_HOST=https://${NETWORK_NAME}.${BASE_HOSTNAME}
+      - VIRTUAL_HOST=https://${BASE_HOSTNAME}
+      - ELASTIC_APM_API_KEY=$ELASTIC_APM_API_KEY
+      - ELASTIC_APM_SERVER_URL=${ELASTIC_APM_SERVER_URL}
+      - ELASTIC_APM_ENVIRONMENT=${NETWORK_NAME}
+    networks:
+      frontend-internal:
+      dbsync:
+      default:
+        aliases:
+          - dbsync-api-${NETWORK_NAME}
+          - ${NETWORK_NAME}-dbsync
+          - dbsync-${NETWORK_NAME}
+    deploy:
+      restart_policy:
+        delay: 10s
+
+      placement:
+        constraints:
+         -  node.labels.dbsync1==true
+networks:
+  frontend-internal: 
+    external: true
+  default:
+    name: dbsync-api
+    attachable: true
+  dbsync:
+    external: true
+  
