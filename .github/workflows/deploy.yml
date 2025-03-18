@@ -72,6 +72,7 @@ jobs:
           NETWORK_NAME: ${{ matrix.network }}
           IMAGE_TAG: ${{ github.sha }}
           DOCKER_HOST: 172.31.0.5:2376
+          BASE_HOSTNAME: ${{vars.BASE_HOSTNAME}}
           DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
           DATABASE_HOST: ${{ vars.DATABASE_HOST }}
           ELASTIC_APM_API_KEY: ${{ secrets.ELASTIC_APM_API_KEY }}
