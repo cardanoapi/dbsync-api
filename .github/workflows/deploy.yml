@@ -70,7 +70,6 @@ jobs:
         working-directory: deploy
         env:
           NETWORK_NAME: ${{ matrix.network }}
-          COMMIT_SHA: ${{ github.sha }}
           IMAGE_TAG: ${{ github.sha }}
           DOCKER_HOST: 172.31.0.5:2376
           DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
