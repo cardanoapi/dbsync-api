@@ -143,3 +143,20 @@ export function validateVoter(voterType: string) {
             throw new AppError('Voter is neither drep or cc or spo: ' + voterType)
     }
 }
+
+export function toCamelCase(str: string):string {
+    return str.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase())
+}
+
+export function convertKeysToCamelCase(obj:any):any {
+    if (Array.isArray(obj)) {
+        return obj.map(convertKeysToCamelCase)
+    } else if (obj !== null && typeof obj === 'object') {
+        return Object.keys(obj).reduce((acc:any, key:any) => {
+            const camelCaseKey:any = toCamelCase(key)
+            acc[camelCaseKey] = convertKeysToCamelCase(obj[key])
+            return acc
+        }, {})
+    }
+    return obj
+}

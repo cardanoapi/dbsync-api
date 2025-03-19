@@ -655,6 +655,17 @@ paths:
                     description: Invalid address provided
                 '500':
                     description: Internal server error
+    /api/blockchain/gov-state/committee:
+        get:
+            summary: Get Committee Gov-State 
+            description: Get details regarding committee members, quorum, their expiration and previous gov action id
+            tags:
+                - Blockchain
+            responses:
+                '200':
+                    description: gov state
+                '500':
+                    description: Internal server error
     /api/drep:
         get:
             summary: Fetch DRep list

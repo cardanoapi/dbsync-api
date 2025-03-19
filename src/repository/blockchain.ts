@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../config/db'
+import { convertKeysToCamelCase } from '../helpers/validator'
 
 export async function fetchEpochDuration(limit: number) {
     const result = (await prisma.$queryRaw`
@@ -45,4 +46,60 @@ export async function fetchEpochParams(epoch_no?: number) {
             WHERE epoch_no = ${epoch_no ? epoch_no : Prisma.sql`(SELECT no from epoch order by no desc limit 1)`}
             LIMIT 1;`) as Record<string, any>[]
     return result[0].epoch_param
+}
+
+export async function fetchCommitteeGovState() {
+    const result = (await prisma.$queryRaw`
+        WITH PreviosActionId AS 
+            (
+            SELECT 
+                CASE 
+                    WHEN ENCODE(tx.hash, 'hex') = '' OR gap.index IS NULL THEN NULL
+                    ELSE ENCODE(tx.hash, 'hex') || '#' || gap.index::TEXT
+                END AS hash_index
+            FROM gov_action_proposal gap
+            JOIN tx ON tx.id = gap.tx_id
+            JOIN block b ON b.id = tx.block_id
+            WHERE gap.id = (
+                SELECT gap.prev_gov_action_proposal 
+                FROM gov_action_proposal gap 
+                WHERE gap.type = 'NewCommittee' 
+                ORDER BY gap.id DESC 
+                LIMIT 1
+            )
+            ), 
+        RatifiedCommitteeGovAction AS (
+            SELECT gap.id
+            FROM gov_action_proposal gap
+            WHERE gap.type = 'NewCommittee'
+            AND ratified_epoch IS NOT NULL
+            ORDER BY gap.id DESC
+            LIMIT 1
+        ),
+        Committee AS (
+            SELECT json_build_object(
+                'prev_gov_action_id', (SELECT hash_index FROM PreviosActionId),
+                'quorum_numerator', c.quorum_numerator,
+                'quorum_denominator', c.quorum_denominator,
+                'committee_hashes', jsonb_agg(
+                    DISTINCT jsonb_build_object(
+                        'hash', encode(ch.raw, 'hex'),
+                        'has_script', ch.has_script,
+                        'expiration_epoch', cm.expiration_epoch
+                    )
+                )
+            ) AS committee_data
+            FROM committee c
+            JOIN committee_member cm ON cm.committee_id = c.id
+            JOIN committee_hash ch ON cm.committee_hash_id = ch.id
+            LEFT JOIN RatifiedCommitteeGovAction rc 
+                ON rc.id = c.gov_action_proposal_id
+            WHERE c.gov_action_proposal_id IS NULL
+            GROUP BY c.quorum_numerator, c.quorum_denominator
+        )
+        SELECT * FROM committee
+        `) as Record<string, any>[]
+    const rawResult = result[0].committee_data
+
+    return convertKeysToCamelCase(rawResult)
 }
