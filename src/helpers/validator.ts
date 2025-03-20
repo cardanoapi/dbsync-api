@@ -105,7 +105,7 @@ export function fromHex(prefix: string, hex: string) {
 
 export function validateAddress(value: string): boolean {
     if (isHexValue(value)) {
-        return value.length === 56 || value.length === 58
+        return value.length === 58
     }
     return false
 }
