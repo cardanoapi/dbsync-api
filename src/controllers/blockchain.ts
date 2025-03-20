@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express'
 import { handlerWrapper } from '../errors/AppError'
-import { fetchEpochDuration, fetchEpochParams } from '../repository/blockchain'
+import { fetchCommitteeGovState, fetchEpochDuration, fetchEpochParams } from '../repository/blockchain'
 
 const router = Router()
 
@@ -16,7 +16,13 @@ const getEpochParams = async (req: Request, res: Response): Promise<any> => {
     return res.status(200).json(result)
 }
 
+const getCommitteeGovState = async(req:Request, res:Response):Promise<any> => {
+    const result = await fetchCommitteeGovState()
+    return res.status(200).json(result)
+}
+
 router.get('/epoch', handlerWrapper(getEpochDuration))
 router.get('/epoch/params', handlerWrapper(getEpochParams))
+router.get('/gov-state/committee', handlerWrapper(getCommitteeGovState))
 
 export default router

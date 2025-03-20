@@ -318,57 +318,67 @@ export const fetchDrepVoteDetails = async (dRepId: string, isScript?: boolean) =
     }
 
     const result = (await prisma.$queryRaw`
-        WITH DrepVoteDetails
-                 as (SELECT DISTINCT
-        ON (gp.id, voting_procedure.drep_voter) concat(encode(gov_action_tx.hash, 'hex'), '#', gp.index) as govActionId,
-            gov_action_metadata.title as title,
-            voting_procedure.vote::text as voteType,
-            voting_anchor.url as voteAnchorUrl,
-            encode(voting_anchor.data_hash, 'hex') as voteAnchorHash,
-            block.epoch_no as epochNo,
-            block.time as time,
-            encode(vote_tx.hash, 'hex') as voteTxHash,
-            gp.type as govActionType
+        WITH TimeOrderedDrepVoteDetails AS (
+        SELECT DISTINCT
+            ON (vote_tx.id, gp.id, voting_procedure.drep_voter) 
+            concat(encode(gov_action_tx.hash, 'hex'), '#', gp.index) AS govActionId,
+            gov_action_metadata.title AS title,
+            voting_procedure.vote::text AS voteType,
+            voting_anchor.url AS voteAnchorUrl,
+            encode(voting_anchor.data_hash, 'hex') AS voteAnchorHash,
+            block.epoch_no AS epochNo,
+            block.time AS time,
+            encode(vote_tx.hash, 'hex') AS voteTxHash,
+            gp.type AS govActionType
         FROM voting_procedure
             JOIN gov_action_proposal AS gp
-        ON gp.id = voting_procedure.gov_action_proposal_id
+                ON gp.id = voting_procedure.gov_action_proposal_id
             JOIN drep_hash
-            ON drep_hash.id = voting_procedure.drep_voter
+                ON drep_hash.id = voting_procedure.drep_voter
             LEFT JOIN voting_anchor
-            ON voting_anchor.id = voting_procedure.voting_anchor_id
+                ON voting_anchor.id = voting_procedure.voting_anchor_id
             JOIN tx AS gov_action_tx
-            ON gov_action_tx.id = gp.tx_id
+                ON gov_action_tx.id = gp.tx_id
             JOIN tx AS vote_tx
-            ON vote_tx.id = voting_procedure.tx_id
+                ON vote_tx.id = voting_procedure.tx_id
             JOIN block
-            ON block.id = vote_tx.block_id
+                ON block.id = vote_tx.block_id
             LEFT JOIN off_chain_vote_data
-            ON off_chain_vote_data.voting_anchor_id = gp.voting_anchor_id
+                ON off_chain_vote_data.voting_anchor_id = gp.voting_anchor_id
             LEFT JOIN off_chain_vote_gov_action_data AS gov_action_metadata
-            ON gov_action_metadata.off_chain_vote_data_id = off_chain_vote_data.id
-        WHERE drep_hash.raw = decode(${dRepId}
-            , 'hex')
-          AND (drep_hash.has_script = ${scriptPart[0]}
-           OR drep_hash.has_script= ${scriptPart[1]})
-        ORDER BY gp.id, voting_procedure.drep_voter, block.time, voting_procedure.id DESC),
-            TimeOrderedDrepVoteDetails as (
-        select *
-        from DrepVoteDetails
-        order by DrepVoteDetails.time desc)
-        SELECT json_agg(
-                       json_build_object(
-                               'govActionId', TimeOrderedDrepVoteDetails.govActionId,
-                               'title', TimeOrderedDrepVoteDetails.title,
-                               'voteType', TimeOrderedDrepVoteDetails.voteType,
-                               'voteAnchorUrl', TimeOrderedDrepVoteDetails.voteAnchorUrl,
-                               'voteAnchorHash', TimeOrderedDrepVoteDetails.voteAnchorHash,
-                               'epochNo', TimeOrderedDrepVoteDetails.epochNo,
-                               'time', TimeOrderedDrepVoteDetails.time,
-                               'voteTxHash', TimeOrderedDrepVoteDetails.voteTxHash,
-                               'govActionType', TimeOrderedDrepVoteDetails.govActionType
-                       )
-               ) AS votes
-        from TimeOrderedDrepVoteDetails
+                ON gov_action_metadata.off_chain_vote_data_id = off_chain_vote_data.id
+        WHERE drep_hash.raw = decode(${dRepId}, 'hex')
+        AND (drep_hash.has_script = ${scriptPart[0]} OR drep_hash.has_script = ${scriptPart[1]})
+        ORDER BY vote_tx.id DESC, gp.id, voting_procedure.drep_voter, block.time, voting_procedure.id DESC
+    ),
+    GroupedVoteDetails AS (
+        SELECT DISTINCT ON (govActionId)
+            govActionId,
+            title,
+            voteType,
+            voteAnchorUrl,
+            voteAnchorHash,
+            epochNo,
+            time,
+            voteTxHash,
+            govActionType
+        FROM TimeOrderedDrepVoteDetails
+        ORDER BY govActionId, voteTxHash DESC 
+    )
+    SELECT json_agg(
+                    json_build_object(
+                            'govActionId', GroupedVoteDetails.govActionId,
+                            'title', GroupedVoteDetails.title,
+                            'voteType', GroupedVoteDetails.voteType,
+                            'voteAnchorUrl', GroupedVoteDetails.voteAnchorUrl,
+                            'voteAnchorHash', GroupedVoteDetails.voteAnchorHash,
+                            'epochNo', GroupedVoteDetails.epochNo,
+                            'time', GroupedVoteDetails.time,
+                            'voteTxHash', GroupedVoteDetails.voteTxHash,
+                            'govActionType', GroupedVoteDetails.govActionType
+                    )
+            ) AS votes
+    from GroupedVoteDetails
     `) as Record<any, any>[]
     return result[0].votes
 }
