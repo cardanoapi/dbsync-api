@@ -8,16 +8,11 @@ const router = Router()
 const getFaucetBalance = async (req: Request, res: Response): Promise<any> => {
     let address = convertToHexIfBech32(req.query.address as string)
     if (validateAddress(address)) {
-        if (address.length == 56) {
-            return res.status(400).json({ message: 'Provide a valid address' })
-        }
+        const balance = await fetchFaucetBalance(address)
+        return res.status(200).json(balance)
     } else {
         return res.status(400).json({ message: 'Provide a valid address' })
     }
-
-    const balance = await fetchFaucetBalance(address)
-
-    return res.status(200).json(balance)
 }
 
 router.get('/balance', handlerWrapper(getFaucetBalance))
