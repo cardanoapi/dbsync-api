@@ -573,7 +573,7 @@ export const fetchDrepLiveStats = async (drepId: string, isScript?: boolean) => 
 
     const drepVotingHistory = (await prisma.$queryRaw`
         WITH firstRegistration AS (
-            SELECT b.time AS firstRegistrationTime
+            SELECT b.epoch_no AS firstRegistrationEpoch
             FROM drep_registration dr
             JOIN drep_hash dh ON dh.id = dr.drep_hash_id
             JOIN tx ON tx.id = dr.tx_id
@@ -586,10 +586,8 @@ export const fetchDrepLiveStats = async (drepId: string, isScript?: boolean) => 
         govActionsAfter AS (
             SELECT COALESCE(COUNT(DISTINCT gp.id), 0) AS totalGovActionsAfter
             FROM gov_action_proposal AS gp
-            JOIN tx ON tx.id = gp.tx_id
-            JOIN block b ON b.id = tx.block_id
             LEFT JOIN firstRegistration ON TRUE 
-            WHERE b.time > firstRegistration.firstRegistrationTime
+            WHERE gp.expiration > firstRegistration.firstRegistrationEpoch
         ),
         votedGovActions AS (
             SELECT COUNT(DISTINCT gp.id) AS voted

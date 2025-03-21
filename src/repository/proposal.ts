@@ -503,7 +503,25 @@ export const fetchProposalVoteCount = async (proposalId: string, proposalIndex: 
     `
     const spoSelectionQuery = Prisma.sql`SELECT 'spo' AS voterRole, (SELECT jsonb_agg(to_jsonb(poolVoteRecord)) FROM poolVoteRecord) AS voteRecord`
     const ccVoteQuery = Prisma.sql`
-        , committeeVoteRecord AS (
+        , RatifiedCommitteeGovAction AS (
+            SELECT gap.id
+            FROM gov_action_proposal gap
+            WHERE gap.type = 'NewCommittee'
+            AND ratified_epoch IS NOT NULL
+            ORDER BY gap.id DESC
+            LIMIT 1
+        ),
+        Committee AS (
+            SELECT Count(DISTINCT(ch.raw)) as committeeMembersCount
+            FROM committee c
+            JOIN committee_member cm ON cm.committee_id = c.id
+            JOIN committee_hash ch ON cm.committee_hash_id = ch.id
+            LEFT JOIN RatifiedCommitteeGovAction rc 
+                ON rc.id = c.gov_action_proposal_id
+            WHERE c.gov_action_proposal_id IS NULL
+            GROUP BY c.quorum_numerator, c.quorum_denominator
+        ), 
+        committeeVoteRecord AS (
             WITH CommitteeVotes AS (
                 -- Count committee votes for each vote type
                 SELECT 
@@ -531,8 +549,8 @@ export const fetchProposalVoteCount = async (proposalId: string, proposalIndex: 
                 WHERE cm.expiration_epoch > (SELECT epoch FROM latestOrGovActionExpiration)
                 ORDER BY ch.raw, cm.expiration_epoch DESC
             )
-            SELECT 'total_distribution' as vote_type, COUNT(DISTINCT hash) AS count
-            FROM CommitteeData
+            SELECT 'total_distribution' as vote_type, committeeMembersCount AS count
+            FROM Committee
             UNION ALL
             SELECT 'yes_votes' as vote_type, COALESCE(cc_Yes_Votes, 0) AS count FROM CommitteeVotes
             UNION ALL
