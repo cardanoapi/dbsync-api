@@ -9,10 +9,10 @@ const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 })
 
 const updateCache = async () => {
     const activeTotalStake = await fetchActiveToalStake()
-    const liveTotalStake = await fetchLiveTotalStake()
+    //const liveTotalStake = await fetchLiveTotalStake()
 
     cache.set('activeTotalStake', activeTotalStake)
-    cache.set('liveTotalStake', liveTotalStake)
+    //cache.set('liveTotalStake', liveTotalStake)
 }
 
 updateCache()
@@ -35,6 +35,6 @@ const getToalLiveStake = async (req: Request, res: Response) => {
 }
 
 router.get('/active-stake', handlerWrapper(getToalActiveStake))
-router.get('/live-stake', handlerWrapper(getToalLiveStake))
+//router.get('/live-stake', handlerWrapper(getToalLiveStake))
 
 export default router
