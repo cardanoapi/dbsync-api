@@ -1,6 +1,5 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../config/db'
-import { formatResult } from '../helpers/formatter'
 import { ProposalTypes, SortTypes } from '../types/proposal'
 
 export const fetchProposals = async (
@@ -519,7 +518,6 @@ export const fetchProposalVoteCount = async (proposalId: string, proposalIndex: 
             LEFT JOIN RatifiedCommitteeGovAction rc 
                 ON rc.id = c.gov_action_proposal_id
             WHERE c.gov_action_proposal_id IS NULL
-            GROUP BY c.quorum_numerator, c.quorum_denominator
         ), 
         committeeVoteRecord AS (
             WITH CommitteeVotes AS (
@@ -1326,6 +1324,7 @@ export const fetchProposalById = async (proposalId: string, proposaIndex: number
         any,
         any
     >[]
+    if (result.length == 0) return result
     const proposalVoteCount = includeVoteCount
         ? { vote: await fetchProposalVoteCount(proposalId, proposaIndex) }
         : undefined
