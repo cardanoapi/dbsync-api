@@ -11,8 +11,10 @@ const getProposals = async (req: Request, res: Response) => {
     const page = req.query.page ? +req.query.page : 1
     const type = req.query.type
         ? Array.isArray(req.query.type)
-            ? req.query.type.map((t) => t as ProposalTypes)
-            : [req.query.type as ProposalTypes]
+            ? (req.query.type as ProposalTypes[])
+            : typeof req.query.type === 'string'
+                ? req.query.type.split(',').map((type) => type as ProposalTypes)
+                : undefined
         : undefined
     const sort = req.query.sort ? (req.query.sort as SortTypes) : undefined
     const includeVoteCount = 'true' == (req.query.vote_count as string)
