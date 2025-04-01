@@ -846,7 +846,7 @@ paths:
                   name: sort
                   schema:
                       type: string
-                      enum: [CreatedDate, ExpiryDate]
+                      enum: ['Newly Created', 'Soon to Expire', 'Highest Yes Count']
                 - in: query
                   name: type
                   schema:
