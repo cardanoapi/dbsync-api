@@ -6,7 +6,7 @@ export const fetchProposals = async (
     page: number,
     size: number,
     proposal?: string,
-    proposalType?: ProposalTypes,
+    proposalType?: ProposalTypes[],
     sort?: SortTypes,
     includeVoteCount?: boolean
 ) => {
@@ -292,10 +292,13 @@ FROM
   AND gov_action_proposal.dropped_epoch IS NULL 
 ${
     proposalType
-        ? Prisma.sql`Where gov_action_proposal.type = ${Prisma.raw(`'${proposalType}'::govactiontype`)}`
+        ? Prisma.sql`WHERE gov_action_proposal.type = ANY(${Prisma.raw(
+              `ARRAY[${proposalType.map((type) => `'${type}'`).join(', ')}]::govactiontype[]`
+          )})`
         : Prisma.sql``
-} 
-GROUP BY
+}
+
+  GROUP BY
     (gov_action_proposal.id,
      stake_address.view,
      treasury_withdrawal.amount,

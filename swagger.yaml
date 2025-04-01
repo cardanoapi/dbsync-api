@@ -850,17 +850,19 @@ paths:
                 - in: query
                   name: type
                   schema:
-                      type: string
-                      enum:
-                          [
-                              ParameterChange,
-                              HardForkInitiation,
-                              TreasuryWithdrawals,
-                              NoConfidence,
-                              NewCommittee,
-                              NewConstitution,
-                              InfoAction,
-                          ]
+                   type: array
+                   items:
+                     type: string
+                     enum:
+                       - ParameterChange
+                       - HardForkInitiation
+                       - TreasuryWithdrawals
+                       - NoConfidence
+                       - NewCommittee
+                       - NewConstitution
+                       - InfoAction
+                  description: Filter by one or more action types.        
+                  explode: true       
                 - in: query
                   name: proposal
                   description: Search by proposal id
