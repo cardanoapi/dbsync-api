@@ -334,7 +334,8 @@ ${
   ${proposal ? Prisma.sql`HAVING creator_tx.hash = decode(${proposal},'hex')` : Prisma.sql``}
   ${
       sort === 'Soon to Expire'
-          ? Prisma.sql`ORDER BY epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no) DESC`
+          ? Prisma.sql`HAVING epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no) >= CURRENT_DATE
+                        ORDER BY epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no) ASC`
           : Prisma.sql`ORDER BY creator_block.time DESC`
   }
   OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)}
