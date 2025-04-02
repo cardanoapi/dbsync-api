@@ -332,8 +332,9 @@ ${
      prev_gov_action_tx.hash) 
   ${proposal ? Prisma.sql`HAVING creator_tx.hash = decode(${proposal},'hex')` : Prisma.sql``}
   ${
-      sort === 'ExpiryDate'
-          ? Prisma.sql`ORDER BY epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no) DESC`
+      sort === 'Soon to Expire'
+          ? Prisma.sql`HAVING epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no) >= CURRENT_DATE
+                        ORDER BY epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no) ASC`
           : Prisma.sql`ORDER BY creator_block.time DESC`
   }
   OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)}
@@ -380,6 +381,17 @@ ${
         parsedResults.push(parsedResult)
     }
 
+    if (includeVoteCount && sort == 'Highest Yes Count') {
+        parsedResults.sort((a, b) => {
+            const aDrepYes = a.vote.drep.yes.count ?? 0
+            const aSpoYes = a.vote.spo.yes.count ?? 0
+            const bDrepYes = b.vote.drep.yes.count ?? 0
+            const bSpoYes = b.vote.spo.yes.count ?? 0
+            const aCCYes = a.vote.cc.yes
+            const bCCYes = b.vote.cc.yes
+            return bDrepYes + bSpoYes + bCCYes - (aDrepYes + aSpoYes + aCCYes)
+        })
+    }
     return { items: parsedResults, totalCount }
 }
 
