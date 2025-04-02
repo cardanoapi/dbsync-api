@@ -848,21 +848,26 @@ paths:
                       type: string
                       enum: ['Newly Created', 'Soon to Expire', 'Highest Yes Count']
                 - in: query
+                  name: state
+                  schema:
+                      type: string
+                      enum: ['Live', 'Expired', 'Ratified', 'Enacted', 'Dropped']
+                - in: query
                   name: type
                   schema:
-                   type: array
-                   items:
-                     type: string
-                     enum:
-                       - ParameterChange
-                       - HardForkInitiation
-                       - TreasuryWithdrawals
-                       - NoConfidence
-                       - NewCommittee
-                       - NewConstitution
-                       - InfoAction
-                  description: Filter by one or more action types.        
-                  explode: true       
+                      type: array
+                      items:
+                          type: string
+                          enum:
+                              - ParameterChange
+                              - HardForkInitiation
+                              - TreasuryWithdrawals
+                              - NoConfidence
+                              - NewCommittee
+                              - NewConstitution
+                              - InfoAction
+                  description: Filter by one or more action types.
+                  explode: true
                 - in: query
                   name: proposal
                   description: Search by proposal id

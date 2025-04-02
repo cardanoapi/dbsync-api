@@ -7,3 +7,4 @@ export type ProposalTypes =
     | 'NewConstitution'
     | 'InfoAction'
 export type SortTypes = 'Newly Created' | 'Soon to Expire' | 'Highest Yes Count'
+export type GovActionStateTypes = 'Live' | 'Expired' | 'Ratified' | 'Enacted' | 'Dropped'

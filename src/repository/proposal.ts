@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../config/db'
 import { formatResult } from '../helpers/formatter'
-import { ProposalTypes, SortTypes } from '../types/proposal'
+import { GovActionStateTypes, ProposalTypes, SortTypes } from '../types/proposal'
 
 export const fetchProposals = async (
     page: number,
@@ -9,6 +9,7 @@ export const fetchProposals = async (
     proposal?: string,
     proposalType?: ProposalTypes[],
     sort?: SortTypes,
+    state?: GovActionStateTypes,
     includeVoteCount?: boolean
 ) => {
     const result = (await prisma.$queryRaw`
@@ -181,12 +182,28 @@ SELECT
                         ELSE
                             null
                     END,
-    'status', CASE 
-                    when gov_action_proposal.enacted_epoch is not NULL then json_build_object('enactedEpoch', gov_action_proposal.enacted_epoch)
-                    when gov_action_proposal.ratified_epoch is not NULL then json_build_object('ratifiedEpoch', gov_action_proposal.ratified_epoch)
-                    when gov_action_proposal.expired_epoch is not NULL then json_build_object('expiredEpoch', gov_action_proposal.expired_epoch)
-                    else NULL
-                END,
+    'status', json_build_object(
+        'ratified', 
+            json_build_object(
+            'epoch', gov_action_proposal.ratified_epoch, 
+            'time', (SELECT end_time FROM epoch WHERE epoch.no = gov_action_proposal.ratified_epoch)
+            ),
+        'enacted', 
+            json_build_object(
+            'epoch', gov_action_proposal.enacted_epoch, 
+            'time', (SELECT end_time FROM epoch WHERE epoch.no = gov_action_proposal.enacted_epoch)
+            ),
+        'dropped', 
+            json_build_object(
+            'epoch', gov_action_proposal.dropped_epoch, 
+            'time', (SELECT end_time FROM epoch WHERE epoch.no = gov_action_proposal.dropped_epoch)
+            ),
+        'expired', 
+            json_build_object(
+            'epoch', gov_action_proposal.expired_epoch, 
+            'time', (SELECT end_time FROM epoch WHERE epoch.no = gov_action_proposal.expired_epoch)
+            )
+        ),
     'expiryDate', epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no),
     'expiryEpochNon', gov_action_proposal.expiration,
     'createdDate', creator_block.time,
@@ -244,6 +261,10 @@ FROM
         CROSS JOIN always_abstain_voting_power
         JOIN tx AS creator_tx ON creator_tx.id = gov_action_proposal.tx_id
         JOIN block AS creator_block ON creator_block.id = creator_tx.block_id
+        LEFT JOIN epoch AS ratified_epoch ON ratified_epoch.no = gov_action_proposal.ratified_epoch
+        LEFT JOIN epoch AS enacted_epoch ON enacted_epoch.no = gov_action_proposal.enacted_epoch
+        LEFT JOIN epoch AS dropped_epoch ON dropped_epoch.no = gov_action_proposal.dropped_epoch
+        LEFT JOIN epoch AS expired_epoch ON expired_epoch.no = gov_action_proposal.expired_epoch
         LEFT JOIN voting_anchor ON voting_anchor.id = gov_action_proposal.voting_anchor_id
         LEFT JOIN param_proposal as proposal_params ON gov_action_proposal.param_proposal = proposal_params.id
         LEFT JOIN cost_model AS cost_model ON proposal_params.cost_model_id = cost_model.id
@@ -291,14 +312,33 @@ FROM
   AND gov_action_proposal.enacted_epoch IS NULL
   AND gov_action_proposal.expired_epoch IS NULL
   AND gov_action_proposal.dropped_epoch IS NULL 
-${
-    proposalType
-        ? Prisma.sql`WHERE gov_action_proposal.type = ANY(${Prisma.raw(
-              `ARRAY[${proposalType.map((type) => `'${type}'`).join(', ')}]::govactiontype[]`
-          )})`
-        : Prisma.sql``
-}
-
+    ${
+        state === 'Live'
+            ? Prisma.sql`WHERE gov_action_proposal.ratified_epoch is NULL 
+                AND gov_action_proposal.enacted_epoch is NULL 
+                AND gov_action_proposal.dropped_epoch is NULL 
+                AND gov_action_proposal.expired_epoch is NULL`
+            : state === 'Expired'
+            ? Prisma.sql`WHERE gov_action_proposal.expired_epoch is not NULL`
+            : state === 'Enacted'
+            ? Prisma.sql`WHERE gov_action_proposal.enacted_epoch is not NULL`
+            : state === 'Ratified'
+            ? Prisma.sql`WHERE gov_action_proposal.ratified_epoch is not NULL`
+            : state === 'Dropped'
+            ? Prisma.sql`WHERE gov_action_proposal.dropped_epoch is not NULL`
+            : Prisma.sql``
+    }
+    ${
+        proposalType
+            ? state
+                ? Prisma.sql`AND gov_action_proposal.type = ANY(${Prisma.raw(
+                      `ARRAY[${proposalType.map((type) => `'${type}'`).join(', ')}]::govactiontype[]`
+                  )})`
+                : Prisma.sql`WHERE gov_action_proposal.type = ANY(${Prisma.raw(
+                      `ARRAY[${proposalType.map((type) => `'${type}'`).join(', ')}]::govactiontype[]`
+                  )})`
+            : Prisma.sql``
+    }
   GROUP BY
     (gov_action_proposal.id,
      stake_address.view,
@@ -330,11 +370,22 @@ ${
      always_no_confidence_voting_power.amount,
      always_abstain_voting_power.amount,
      prev_gov_action.index,
-     prev_gov_action_tx.hash) 
+     prev_gov_action_tx.hash,
+     ratified_epoch.no,
+     ratified_epoch.end_time,
+     enacted_epoch.no,
+     enacted_epoch.end_time,
+     dropped_epoch.no,
+     dropped_epoch.end_time,
+     expired_epoch.no,
+     expired_epoch.end_time
+     ) 
   ${proposal ? Prisma.sql`HAVING creator_tx.hash = decode(${proposal},'hex')` : Prisma.sql``}
   ${
       sort === 'Soon to Expire'
-          ? Prisma.sql`HAVING epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no) >= CURRENT_DATE
+          ? proposal
+              ? Prisma.sql``
+              : Prisma.sql`HAVING epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no) >= CURRENT_DATE
                         ORDER BY epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no) ASC`
           : Prisma.sql`ORDER BY creator_block.time DESC`
   }
