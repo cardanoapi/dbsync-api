@@ -103,3 +103,34 @@ export async function fetchCommitteeGovState() {
 
     return convertKeysToCamelCase(rawResult)
 }
+
+export async function fetchBlockInfo(limit?: number, blockNo?: number) {
+    let result: any
+    if (blockNo) result = await prisma.$queryRaw`select * from block b where b.block_no=${blockNo}`
+    else
+        result =
+            await prisma.$queryRaw`select * from block b where b.block_no is not null order by b.block_no desc limit ${
+                limit || 5
+            } `
+
+    const parseResult = (result: any) => {
+        return {
+            blockNo: Number(result.block_no),
+            hash: result.hash.toString('hex'),
+            epochNo: result.epoch_no,
+            slotNo: result.slot_no.toString(),
+            epochSlotNo: result.epoch_slot_no,
+            size: result.size,
+            time: result.time,
+            txCount: Number(result.tx_count),
+            verificationKey: result.vrf_key,
+        }
+    }
+
+    if (result.length == 0) return null
+    if (result.length == 1) return parseResult(result[0])
+    else
+        return result.map((res: any) => {
+            return parseResult(res)
+        })
+}
