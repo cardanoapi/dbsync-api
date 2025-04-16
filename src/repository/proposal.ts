@@ -1228,12 +1228,28 @@ export const fetchProposalById = async (proposalId: string, proposaIndex: number
                         ELSE
                             null
                     END,
-        'status', CASE 
-                    when gov_action_proposal.enacted_epoch is not NULL then json_build_object('enactedEpoch', gov_action_proposal.enacted_epoch)
-                    when gov_action_proposal.ratified_epoch is not NULL then json_build_object('ratifiedEpoch', gov_action_proposal.ratified_epoch)
-                    when gov_action_proposal.expired_epoch is not NULL then json_build_object('expiredEpoch', gov_action_proposal.expired_epoch)
-                    else NULL
-                 END,
+        'status', json_build_object(
+                    'ratified', 
+                        json_build_object(
+                        'epoch', gov_action_proposal.ratified_epoch, 
+                        'time', (SELECT end_time FROM epoch WHERE epoch.no = gov_action_proposal.ratified_epoch)
+                        ),
+                    'enacted', 
+                        json_build_object(
+                        'epoch', gov_action_proposal.enacted_epoch, 
+                        'time', (SELECT end_time FROM epoch WHERE epoch.no = gov_action_proposal.enacted_epoch)
+                        ),
+                    'dropped', 
+                        json_build_object(
+                        'epoch', gov_action_proposal.dropped_epoch, 
+                        'time', (SELECT end_time FROM epoch WHERE epoch.no = gov_action_proposal.dropped_epoch)
+                        ),
+                    'expired', 
+                        json_build_object(
+                        'epoch', gov_action_proposal.expired_epoch, 
+                        'time', (SELECT end_time FROM epoch WHERE epoch.no = gov_action_proposal.expired_epoch)
+                        )
+                    ),
         'expiryDate', epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no),
         'expiryEpochNon', gov_action_proposal.expiration,
         'createdDate', creator_block.time,
@@ -1377,6 +1393,9 @@ export const fetchProposalById = async (proposalId: string, proposaIndex: number
     const proposalVoteCount = includeVoteCount
         ? { vote: await fetchProposalVoteCount(proposalId, proposaIndex) }
         : undefined
+    if (result.length == 0) {
+        return null
+    }
     const resultData = result[0].result
     const parsedResult = {
         proposal: {

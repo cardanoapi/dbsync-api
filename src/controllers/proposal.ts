@@ -61,6 +61,7 @@ const getProposalById = async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'Provide valid govAction Id (hash#index) or bech32' })
     }
     const proposalDetails = await fetchProposalById(proposal.id, proposal.ix, includeVoteCount)
+    if (!proposalDetails) return res.status(404).json(proposalDetails)
     return res.status(200).json(proposalDetails)
 }
 
