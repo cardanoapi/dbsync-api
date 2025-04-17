@@ -635,6 +635,30 @@ paths:
                     description: Invalid address provided
                 '500':
                     description: Internal server error
+    /api/blockchain/block:
+        get:
+            summary: Get block details of a specific block number or get a list of details of latest 'n' blocks (default 5)
+            description: Get block details of a specific block number or get a list of details of latest 'n' blocks (default 5)
+            tags:
+                - Blockchain
+            parameters:
+                - in: query
+                  name: block_no
+                  schema:
+                      type: integer
+                  required: false
+                  description: specify block number to get the details of
+                - in: query
+                  name: limit
+                  schema:
+                      type: integer
+                  required: false
+                  description: number of latest block details
+            responses:
+                '200':
+                    description: block details
+                '500':
+                    description: Internal server error
     /api/blockchain/epoch/params:
         get:
             summary: Get protocol parameters of specific epoch if specified. Else, get latest protocol parameters
@@ -657,7 +681,7 @@ paths:
                     description: Internal server error
     /api/blockchain/gov-state/committee:
         get:
-            summary: Get Committee Gov-State 
+            summary: Get Committee Gov-State
             description: Get details regarding committee members, quorum, their expiration and previous gov action id
             tags:
                 - Blockchain
@@ -846,23 +870,28 @@ paths:
                   name: sort
                   schema:
                       type: string
-                      enum: [CreatedDate, ExpiryDate]
+                      enum: ['Newly Created', 'Soon to Expire', 'Highest Yes Count']
+                - in: query
+                  name: state
+                  schema:
+                      type: string
+                      enum: ['Live', 'Expired', 'Ratified', 'Enacted', 'Dropped']
                 - in: query
                   name: type
                   schema:
-                   type: array
-                   items:
-                     type: string
-                     enum:
-                       - ParameterChange
-                       - HardForkInitiation
-                       - TreasuryWithdrawals
-                       - NoConfidence
-                       - NewCommittee
-                       - NewConstitution
-                       - InfoAction
-                  description: Filter by one or more action types.        
-                  explode: true       
+                      type: array
+                      items:
+                          type: string
+                          enum:
+                              - ParameterChange
+                              - HardForkInitiation
+                              - TreasuryWithdrawals
+                              - NoConfidence
+                              - NewCommittee
+                              - NewConstitution
+                              - InfoAction
+                  description: Filter by one or more action types.
+                  explode: true
                 - in: query
                   name: proposal
                   description: Search by proposal id

@@ -1,2 +1,10 @@
-export type ProposalTypes = 'ParameterChange'| 'HardForkInitiation'| 'TreasuryWithdrawals'| 'NoConfidence'| 'NewCommittee'| 'NewConstitution'| 'InfoAction'
-export type SortTypes = 'CreatedDate'|'ExpiryDate'
+export type ProposalTypes =
+    | 'ParameterChange'
+    | 'HardForkInitiation'
+    | 'TreasuryWithdrawals'
+    | 'NoConfidence'
+    | 'NewCommittee'
+    | 'NewConstitution'
+    | 'InfoAction'
+export type SortTypes = 'Newly Created' | 'Soon to Expire' | 'Highest Yes Count'
+export type GovActionStateTypes = 'Live' | 'Expired' | 'Ratified' | 'Enacted' | 'Dropped'
