@@ -1,8 +1,6 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../config/db'
-import { formatResult } from '../helpers/formatter'
 import { GovActionStateTypes, ProposalTypes, SortTypes } from '../types/proposal'
-import { ProposalTypes, SortTypes } from '../types/proposal'
 
 
 export const fetchProposals = async (
