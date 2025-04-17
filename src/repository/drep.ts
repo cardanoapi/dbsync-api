@@ -363,22 +363,25 @@ export const fetchDrepVoteDetails = async (dRepId: string, isScript?: boolean) =
             voteTxHash,
             govActionType
         FROM TimeOrderedDrepVoteDetails
-        ORDER BY govActionId, voteTxHash DESC 
+        ORDER BY govActionId, time DESC 
+    ),
+    OrderedVoteDetails AS (
+        SELECT * from GroupedVoteDetails ORDER BY time DESC
     )
     SELECT json_agg(
                     json_build_object(
-                            'govActionId', GroupedVoteDetails.govActionId,
-                            'title', GroupedVoteDetails.title,
-                            'voteType', GroupedVoteDetails.voteType,
-                            'voteAnchorUrl', GroupedVoteDetails.voteAnchorUrl,
-                            'voteAnchorHash', GroupedVoteDetails.voteAnchorHash,
-                            'epochNo', GroupedVoteDetails.epochNo,
-                            'time', GroupedVoteDetails.time,
-                            'voteTxHash', GroupedVoteDetails.voteTxHash,
-                            'govActionType', GroupedVoteDetails.govActionType
+                            'govActionId', OrderedVoteDetails.govActionId,
+                            'title', OrderedVoteDetails.title,
+                            'voteType', OrderedVoteDetails.voteType,
+                            'voteAnchorUrl', OrderedVoteDetails.voteAnchorUrl,
+                            'voteAnchorHash', OrderedVoteDetails.voteAnchorHash,
+                            'epochNo', OrderedVoteDetails.epochNo,
+                            'time', OrderedVoteDetails.time,
+                            'voteTxHash', OrderedVoteDetails.voteTxHash,
+                            'govActionType', OrderedVoteDetails.govActionType
                     )
             ) AS votes
-    from GroupedVoteDetails
+    from OrderedVoteDetails
     `) as Record<any, any>[]
     return result[0].votes
 }
