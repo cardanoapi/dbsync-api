@@ -35,7 +35,7 @@ const getBlockInfo = async (req: Request, res: Response) => {
     }
     
     const blockInfo = {
-      blockHash: latestBlock.hash.toString("hex"),
+      blockHash: (latestBlock.hash as Buffer).toString('hex'),
       blockNo: latestBlock.block_no,
       slotNo: latestBlock.slot_no?.toString(),
       blockTime: latestBlock.time.toISOString(),
