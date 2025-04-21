@@ -1,37 +1,39 @@
-FROM node:20-alpine  AS api_base
-WORKDIR /prisma
-RUN yarn add prisma
-
+FROM node:20-alpine AS base
 WORKDIR /app
-COPY ./package.json ./yarn.lock ./
-# Copy the rest of the application code to the container
-RUN yarn install --frozen-lockfile --production
 
-COPY ./prisma ./prisma
-RUN /prisma/node_modules/.bin/prisma generate
+# Minimal dependencies to fix the Prisma OpenSSL warning
+RUN apk add --no-cache openssl openssl-dev
 
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
 
-FROM api_base AS builder
-RUN yarn install
-COPY ./ ./
+COPY prisma ./prisma
+RUN yarn prisma generate
+
+COPY . .
 RUN yarn build
 RUN cp ./swagger.yaml ./dist
 
+# ---------- Final lightweight image ----------
+FROM node:20-alpine AS production
+RUN apk add --no-cache openssl
 
-
-FROM node:20-alpine
-RUN apk add openssl
+# Create a non-root user
 USER node
-
 WORKDIR /api
-COPY --from=api_base --chown=node:node /app/node_modules node_modules
-COPY --from=builder --chown=node:node /app/prisma prisma
-COPY --from=builder --chown=node:node /app/dist ./
 
-# Expose the port the app runs on (if applicable)
+# Copy only what's needed for production runtime
+COPY --from=base --chown=node:node /app/node_modules ./node_modules
+COPY --from=base --chown=node:node /app/prisma ./prisma
+COPY --from=base --chown=node:node /app/dist ./
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV ENABLE_TRACING=false
+ENV RUST_LOG=info
+
+# Expose app port
 EXPOSE 8080
 
-# Command to run the application
-CMD ["node", "/api/index.js"]
-
-
+# Start the app
+CMD ["node", "index.js"]    
