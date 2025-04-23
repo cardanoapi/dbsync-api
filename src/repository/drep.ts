@@ -169,7 +169,7 @@ export const fetchDrepList = async (
                                                         ? Prisma.sql`ORDER BY DRepDistr.amount DESC NULLS LAST`
                                                         : Prisma.sql`ORDER BY newestRegister.time DESC`
                                                 }
-        OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY
+        OFFSET ${(page ? (page < 0 ? 0 : page - 1) : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY
     `) as Record<any, any>[]
     const totalCount = result.length ? Number(result[0].total_count) : 0
     return { items: formatResult(result), totalCount }
@@ -381,7 +381,7 @@ export const fetchDrepVoteDetails = async (size = 10, page = 1, dRepId: string, 
                     ) AS votes,
             COUNT(*) OVER () AS total_count
     from OrderedVoteDetails
-    OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY
+    OFFSET ${(page ? (page < 0 ? 0 : page - 1) : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY
     `) as Record<any, any>[]
     const totalCount = result.length ? Number(result[0].total_count) : 0
     const parsedResult = result.map((res) => res.votes)
@@ -499,8 +499,7 @@ export const fetchDrepRegistrationDetails = async (size = 10, page = 1, dRepId: 
         WHERE dh.raw = DECODE(${dRepId}, 'hex')
           AND (dh.has_script = ${scriptPart[0]} OR dh.has_script = ${scriptPart[1]})
         ORDER BY b.time DESC
-        OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)} 
-        FETCH NEXT ${size ? size : 10} ROWS ONLY;
+        OFFSET ${(page ? (page < 0 ? 0 : page - 1) : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY
       `) as Record<string, any>[]
     const totalCount = result.length ? Number(result[0].total_count) : 0
     const res = result.map((r) => r.result)
@@ -737,8 +736,7 @@ export const fetchDrepLiveDelegators = async (
         FROM latest
         LEFT JOIN utxo_view uv ON uv.stake_address_id = latest.id
         GROUP BY latest.stakeAddress, latest.id, latest.delegations::text
-        OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)} 
-        FETCH NEXT ${size ? size : 10} ROWS ONLY
+        OFFSET ${(page ? (page < 0 ? 0 : page - 1) : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY
     `) as Record<string, any>[]
     const totalCount = result.length ? Number(result[0].total_count) : 0
     const parseResult = () => {
@@ -840,7 +838,7 @@ export const fetchDRepActiveDelegators = async (
             AND (dh.has_script = ${scriptPart[0]} OR dh.has_script = ${scriptPart[1]})
             AND b.epoch_no < (SELECT MAX(no) FROM epoch)
             GROUP BY sa.view, tx.hash, e.no, b.time, lt.addr_id
-            OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY`) as Record<
+            OFFSET ${(page ? (page < 0 ? 0 : page - 1) : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY`) as Record<
             string,
             any
         >[]
@@ -878,7 +876,7 @@ export const fetchDRepActiveDelegators = async (
         WHERE dh.raw = DECODE(${dRepId}, 'hex')
         AND (dh.has_script = ${scriptPart[0]} OR dh.has_script = ${scriptPart[1]})
         AND b.epoch_no < (SELECT e.no from epoch e ORDER BY e.no desc limit 1)
-        OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY`) as Record<
+        OFFSET ${(page ? (page < 0 ? 0 : page - 1) : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY`) as Record<
             string,
             any
         >[]
@@ -932,7 +930,7 @@ export const fetchDrepDelegationHistory = async (size = 10, page = 1, dRepId: st
                  JOIN block b ON b.id = tx.block_id
         GROUP BY stakes.stake
         ORDER BY stakes.stake
-        OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY;
+        OFFSET ${(page ? (page < 0 ? 0 : page - 1) : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY;
     `) as Record<string, any>[]
     const totalCount = result.length ? Number(result[0].total_count) : 0
     interface Delegation {

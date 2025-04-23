@@ -389,8 +389,7 @@ FROM
                         ORDER BY epoch_utils.last_epoch_end_time + epoch_utils.epoch_duration * (gov_action_proposal.expiration - epoch_utils.last_epoch_no) ASC`
           : Prisma.sql`ORDER BY creator_block.time DESC`
   }
-  OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)}
-  FETCH NEXT ${size ? size : 10} ROWS ONLY
+  OFFSET ${(page ? (page < 0 ? 0 : page - 1) : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY
   `) as Record<any, any>[]
     const totalCount = result.length ? Number(result[0].total_count) : 0
     const parsedResults: any[] = []
