@@ -452,6 +452,18 @@ paths:
                   schema:
                       type: string
                       example: 'drep15fy2nszna039pdregpryhzahnwcr2rred4nx2qaec7k07nvcq26'
+                - in: query
+                  name: page
+                  schema:
+                      type: number
+                      default: 1
+                  required: false
+                - in: query
+                  name: size
+                  schema:
+                      type: number
+                      default: 10
+                  required: false
             responses:
                 '200':
                     description: Successfully retrieved voting details of given Drep
@@ -572,6 +584,18 @@ paths:
                   schema:
                       type: string
                       example: 'drep15fy2nszna039pdregpryhzahnwcr2rred4nx2qaec7k07nvcq26'
+                - in: query
+                  name: page
+                  schema:
+                      type: number
+                      default: 1
+                  required: false
+                - in: query
+                  name: size
+                  schema:
+                      type: number
+                      default: 10
+                  required: false
             responses:
                 '200':
                     description: Successfully retrieved voting details of given Drep

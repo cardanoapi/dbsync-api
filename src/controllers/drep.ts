@@ -41,9 +41,11 @@ const getDrepList = async (req: Request, res: Response) => {
 }
 
 const getDrepVoteDetails = async (req: Request, res: Response) => {
+    const size = req.query.size ? +req.query.size : 10
+    const page = req.query.page ? +req.query.page : 1
     const dRepId = decodeDrep(req.params.id as string)
-    const result = await fetchDrepVoteDetails(dRepId.credential, dRepId.isScript)
-    return res.status(200).json(result)
+    const { totalCount, items } = await fetchDrepVoteDetails(size, page, dRepId.credential, dRepId.isScript)
+    return res.status(200).json({ totalCount, size, page, items })
 }
 
 const getDrepDelegationDetails = async (req: Request, res: Response) => {
@@ -55,9 +57,11 @@ const getDrepDelegationDetails = async (req: Request, res: Response) => {
 }
 
 const getDrepRegistrationDetails = async (req: Request, res: Response) => {
+    const size = req.query.size ? +req.query.size : 10
+    const page = req.query.page ? +req.query.page : 1
     const dRepId = decodeDrep(req.params.id as string)
-    const result = await fetchDrepRegistrationDetails(dRepId.credential, dRepId.isScript)
-    return res.status(200).json(result)
+    const { items, totalCount } = await fetchDrepRegistrationDetails(size, page, dRepId.credential, dRepId.isScript)
+    return res.status(200).json({ totalCount, page, size, items })
 }
 
 const getDrepLiveStats = async (req: Request, res: Response) => {

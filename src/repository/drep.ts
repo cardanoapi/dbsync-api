@@ -309,7 +309,7 @@ export const fetchDrepDetails = async (drepId: string, isScript?: boolean) => {
     return result[0].result.drep_details ? result[0].result.drep_details : result[0].result
 }
 
-export const fetchDrepVoteDetails = async (dRepId: string, isScript?: boolean) => {
+export const fetchDrepVoteDetails = async (size = 10, page = 1, dRepId: string, isScript?: boolean) => {
     let scriptPart = [true, false]
     if (isScript === true) {
         scriptPart = [true, true]
@@ -368,8 +368,7 @@ export const fetchDrepVoteDetails = async (dRepId: string, isScript?: boolean) =
     OrderedVoteDetails AS (
         SELECT * from GroupedVoteDetails ORDER BY time DESC
     )
-    SELECT json_agg(
-                    json_build_object(
+    SELECT json_build_object(
                             'govActionId', OrderedVoteDetails.govActionId,
                             'title', OrderedVoteDetails.title,
                             'voteType', OrderedVoteDetails.voteType,
@@ -379,11 +378,14 @@ export const fetchDrepVoteDetails = async (dRepId: string, isScript?: boolean) =
                             'time', OrderedVoteDetails.time,
                             'voteTxHash', OrderedVoteDetails.voteTxHash,
                             'govActionType', OrderedVoteDetails.govActionType
-                    )
-            ) AS votes
+                    ) AS votes,
+            COUNT(*) OVER () AS total_count
     from OrderedVoteDetails
+    OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)} FETCH NEXT ${size ? size : 10} ROWS ONLY
     `) as Record<any, any>[]
-    return result[0].votes
+    const totalCount = result.length ? Number(result[0].total_count) : 0
+    const parsedResult = result.map((res) => res.votes)
+    return { totalCount, items: parsedResult }
 }
 
 // drep delegation historty
@@ -470,7 +472,7 @@ export const fetchDrepDelegationDetails = async (dRepId: string) => {
     return combineArraysWithSameObjectKey(...result).map((r: any) => r.json_build_object)
 }
 
-export const fetchDrepRegistrationDetails = async (dRepId: string, isScript?: boolean) => {
+export const fetchDrepRegistrationDetails = async (size = 10, page = 1, dRepId: string, isScript?: boolean) => {
     let scriptPart = [true, false]
     if (isScript === true) {
         scriptPart = [true, true]
@@ -478,18 +480,31 @@ export const fetchDrepRegistrationDetails = async (dRepId: string, isScript?: bo
         scriptPart = [false, false]
     }
     const result = (await prisma.$queryRaw`
-        select json_build_object('url', va.url, 'deposit', dr.deposit, 'drepName', od.given_name, 'time', b.time, 'txHash', ENCODE(tx.hash, 'hex'))
-        from drep_hash dh
-                 join drep_registration dr on dh.id = dr.drep_hash_id
-                 join tx on dr.tx_id = tx.id
-                 join block b on tx.block_id = b.id
-                 left join voting_anchor va on va.id = dr.voting_anchor_id
-                 left join off_chain_vote_data ov on va.id = ov.voting_anchor_id
-                 left join off_chain_vote_drep_data od on ov.id = od.off_chain_vote_data_id
-        where dh.raw = decode(${dRepId}, 'hex') AND (dh.has_script = ${scriptPart[0]} OR dh.has_script = ${scriptPart[1]})
-        order by b.time desc;
-    `) as Record<string, any>[]
-    return result.map((r) => r.json_build_object)
+        SELECT 
+          JSON_BUILD_OBJECT(
+            'url', va.url,
+            'deposit', dr.deposit,
+            'drepName', od.given_name,
+            'time', b.time,
+            'txHash', ENCODE(tx.hash, 'hex')
+          ) AS result,
+          COUNT(*) OVER () AS total_count
+        FROM drep_hash dh
+        JOIN drep_registration dr ON dh.id = dr.drep_hash_id
+        JOIN tx ON dr.tx_id = tx.id
+        JOIN block b ON tx.block_id = b.id
+        LEFT JOIN voting_anchor va ON va.id = dr.voting_anchor_id
+        LEFT JOIN off_chain_vote_data ov ON va.id = ov.voting_anchor_id
+        LEFT JOIN off_chain_vote_drep_data od ON ov.id = od.off_chain_vote_data_id
+        WHERE dh.raw = DECODE(${dRepId}, 'hex')
+          AND (dh.has_script = ${scriptPart[0]} OR dh.has_script = ${scriptPart[1]})
+        ORDER BY b.time DESC
+        OFFSET ${(page ? page - 1 : 0) * (size ? size : 10)} 
+        FETCH NEXT ${size ? size : 10} ROWS ONLY;
+      `) as Record<string, any>[]
+    const totalCount = result.length ? Number(result[0].total_count) : 0
+    const res = result.map((r) => r.result)
+    return { totalCount, items: res }
 }
 
 export const fetchDrepLiveStats = async (drepId: string, isScript?: boolean) => {
