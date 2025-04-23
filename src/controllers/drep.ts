@@ -1,6 +1,6 @@
-import {Request, Response, Router} from 'express'
-import {handlerWrapper} from '../errors/AppError'
-import {decodeDrep} from '../helpers/validator'
+import { Request, Response, Router } from 'express'
+import { handlerWrapper } from '../errors/AppError'
+import { decodeDrep } from '../helpers/validator'
 import {
     fetchDrepDetails,
     fetchDrepList,
@@ -11,7 +11,7 @@ import {
     fetchDRepActiveDelegators,
     fetchDrepLiveStats,
 } from '../repository/drep'
-import {DrepSortType, DrepStatusType} from '../types/drep'
+import { DrepSortType, DrepStatusType } from '../types/drep'
 
 const router = Router()
 
@@ -26,12 +26,18 @@ const getDrepList = async (req: Request, res: Response) => {
     const page = req.query.page ? +req.query.page : 1
     const status = req.query.status ? (req.query.status as DrepStatusType) : undefined
     const sort = req.query.sort ? (req.query.sort as DrepSortType) : undefined
-    const searchDrep = req.query.search ? decodeDrep(req.query.search as string) : {credential: '', isScript: undefined}
-    const {
-        items,
-        totalCount
-    } = await fetchDrepList(page, size, searchDrep.credential, searchDrep.isScript, status, sort)
-    return res.status(200).json({total: totalCount, page, size, items})
+    const searchDrep = req.query.search
+        ? decodeDrep(req.query.search as string)
+        : { credential: '', isScript: undefined }
+    const { items, totalCount } = await fetchDrepList(
+        page,
+        size,
+        searchDrep.credential,
+        searchDrep.isScript,
+        status,
+        sort
+    )
+    return res.status(200).json({ total: totalCount, page, size, items })
 }
 
 const getDrepVoteDetails = async (req: Request, res: Response) => {
@@ -41,9 +47,11 @@ const getDrepVoteDetails = async (req: Request, res: Response) => {
 }
 
 const getDrepDelegationDetails = async (req: Request, res: Response) => {
+    const size = req.query.size ? +req.query.size : 10
+    const page = req.query.page ? +req.query.page : 1
     const dRepId = decodeDrep(req.params.id as string)
-    const result = await fetchDrepDelegationHistory(dRepId.credential, dRepId.isScript)
-    return res.status(200).json(result)
+    const { items, totalCount } = await fetchDrepDelegationHistory(size, page, dRepId.credential, dRepId.isScript)
+    return res.status(200).json({ totalCount, page, size, items })
 }
 
 const getDrepRegistrationDetails = async (req: Request, res: Response) => {
@@ -59,17 +67,27 @@ const getDrepLiveStats = async (req: Request, res: Response) => {
 }
 
 const getDrepActiveDelegators = async (req: Request, res: Response) => {
+    const size = req.query.size ? +req.query.size : 10
+    const page = req.query.page ? +req.query.page : 1
     const dRepId = decodeDrep(req.params.id as string)
     const balance = req.query.balance === 'true'
-    const result = await fetchDRepActiveDelegators(dRepId.credential, dRepId.isScript, balance)
-    return res.status(200).json(result)
+    const { items, totalCount } = await fetchDRepActiveDelegators(
+        size,
+        page,
+        dRepId.credential,
+        dRepId.isScript,
+        balance
+    )
+    return res.status(200).json({ total: totalCount, page, size, items })
 }
 
 const getDrepLiveDelegators = async (req: Request, res: Response) => {
+    const size = req.query.size ? +req.query.size : 10
+    const page = req.query.page ? +req.query.page : 1
     const dRepId = decodeDrep(req.params.id as string)
     const balance = req.query.balance === 'true'
-    const liveDelegators = await fetchDrepLiveDelegators(dRepId.credential, dRepId.isScript, balance)
-    return res.status(200).json(liveDelegators)
+    const { totalCount, items } = await fetchDrepLiveDelegators(size, page, dRepId.credential, dRepId.isScript, balance)
+    return res.status(200).json({ totalCount, page, size, items })
 }
 
 router.get('/', handlerWrapper(getDrepList))
