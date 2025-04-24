@@ -82,7 +82,7 @@ const getDrepActiveDelegators = async (req: Request, res: Response) => {
         dRepId.isScript,
         balance
     )
-    return res.status(200).json({ total: totalCount, page, size, items })
+    return res.status(200).json({ totalCount, page, size, items })
 }
 
 const getDrepLiveDelegators = async (req: Request, res: Response) => {
