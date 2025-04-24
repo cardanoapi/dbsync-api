@@ -796,12 +796,12 @@ export const fetchDRepActiveDelegators = async (
                 WHERE dv.addr_id IN (SELECT id FROM stakes)
                 GROUP BY dv.addr_id  
             )
-            SELECT 
-                sa.view AS stakeAddress, 
-                ENCODE(tx.hash, 'hex') AS txId,
-                e.no AS epoch,
-                b.time AS time,
-                COALESCE(SUM(uv.value), 0) +
+            SELECT json_build_object (
+                    'stakeAddress', sa.view,
+                    'txId', ENCODE(tx.hash, 'hex'),
+                    'epoch', e.no,
+                    'time', b.time,
+                    'amount', COALESCE(SUM(uv.value), 0) +
                 COALESCE((
                     SELECT SUM(amount)
                     FROM reward r
@@ -825,7 +825,9 @@ export const fetchDRepActiveDelegators = async (
                         JOIN block blka ON blka.id = txa.block_id
                         WHERE w.addr_id = lt.addr_id
                     ), 0)
-                ), 0) AS amount
+                ), 0)
+                ) AS result,
+                COUNT(*) OVER () AS total_count 
             FROM latest_tx lt
             JOIN stake_address sa ON sa.id = lt.addr_id
             JOIN tx ON tx.id = lt.latest_tx_id
@@ -842,7 +844,8 @@ export const fetchDRepActiveDelegators = async (
             string,
             any
         >[]
-    } else {
+    }
+    else {
         result = (await prisma.$queryRaw`
         WITH stakes AS (
             SELECT DISTINCT dv.addr_id AS id
