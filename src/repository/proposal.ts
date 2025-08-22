@@ -630,7 +630,9 @@ export const fetchProposalVoteCount = async (proposalId: string, proposalIndex: 
         SELECT 
             g.id, 
             b.epoch_no AS submittedEpoch, 
-            g.expiration AS expirationEpoch
+            g.expiration AS expirationEpoch,
+            g.ratified_epoch as ratifiedEpoch,
+            g.dropped_epoch as droppedEpoch
         FROM gov_action_proposal g
         JOIN tx ON tx.id = g.tx_id
         JOIN block b ON b.id = tx.block_id
@@ -671,7 +673,9 @@ export const fetchProposalVoteCount = async (proposalId: string, proposalIndex: 
         -- Determine the latest epoch to consider for voting calculations
         SELECT LEAST(
             (SELECT e.no FROM epoch e ORDER BY e.id DESC LIMIT 1),
-            (SELECT g.expirationEpoch FROM ga g)
+            (SELECT g.expirationEpoch FROM ga g),
+            (SELECT g.ratifiedEpoch from ga g),
+            (SELECT g.droppedEpoch from ga g)
         ) AS epoch
     )
 
@@ -1020,17 +1024,17 @@ export const fetchProposalVotes = async (
         FROM voting_procedure vp
         JOIN govAction 
             ON vp.gov_action_proposal_id = govAction.id
-        JOIN tx 
+        JOIN tx
             ON tx.id = vp.tx_id
-        JOIN block b 
+        JOIN block b
             ON b.id = tx.block_id
-        JOIN tx_out txo 
+        JOIN tx_out txo
             ON txo.tx_id = tx.id
-        LEFT JOIN drep_hash dh 
+        LEFT JOIN drep_hash dh
             ON dh.id = vp.drep_voter
-        LEFT JOIN pool_hash ph 
+        LEFT JOIN pool_hash ph
             ON ph.id = vp.pool_voter
-        LEFT JOIN committee_hash ch 
+        LEFT JOIN committee_hash ch
             ON ch.id = vp.committee_voter
         JOIN latestEpoch 
             ON True
