@@ -51,19 +51,17 @@ jobs:
           - preprod
           - mainnet
       max-parallel: 1
+    permissions:
+      contents: read
+      id-token: write
     runs-on: builder
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
   
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - uses: mesudip/docker-stack@master
         with:
-          python-version: '3.x'
-
-      - name: Install docker-stack
-        run: pip install --upgrade docker-stack
-    
+          manager: https://172.31.0.5:2378
 
       - name: Deploy stack
         run: docker-stack deploy --with-registry-auth dbsync-api docker-compose-${{ matrix.network}}.yml
@@ -71,8 +69,8 @@ jobs:
         env:
           NETWORK_NAME: ${{ matrix.network }}
           IMAGE_TAG: ${{ github.sha }}
-          DOCKER_HOST: 172.31.0.5:2376
           BASE_HOSTNAME: ${{vars.BASE_HOSTNAME}}
+          DATABASE_USER: ${{ vars.DATABASE_USER }}
           DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
           DATABASE_HOST: ${{ vars.DATABASE_HOST }}
           ELASTIC_APM_API_KEY: ${{ secrets.ELASTIC_APM_API_KEY }}
